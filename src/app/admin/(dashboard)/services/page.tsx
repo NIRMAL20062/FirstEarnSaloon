@@ -18,6 +18,7 @@ export default function ServicesPage() {
   const { user } = useAuth();
   const { salon } = useSalon();
   const [services, setServices] = useState<Service[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   // Bumped after every mutation to re-run the effect below and refetch,
   // without the effect ever calling a function that itself sets state.
   const [reloadToken, setReloadToken] = useState(0);
@@ -33,14 +34,21 @@ export default function ServicesPage() {
       .getIdToken()
       .then((token) => listAllServices(token, salon.id))
       .then((result) => {
-        if (!cancelled) setServices(result);
+        if (cancelled) return;
+        setServices(result);
+        setLoadError(null);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        console.error("Failed to load services", err);
+        setLoadError(err instanceof Error ? err.message : "Failed to load services.");
       });
     return () => {
       cancelled = true;
     };
   }, [user, salon.id, reloadToken]);
 
-  const loading = services === null;
+  const loading = services === null && !loadError;
   const list = services ?? [];
   const nextSortOrder = list.length ? Math.max(...list.map((s) => s.sortOrder)) + 1 : 0;
 
@@ -96,6 +104,15 @@ export default function ServicesPage() {
           onSubmit={handleAdd}
           onCancel={() => setAdding(false)}
         />
+      ) : null}
+
+      {loadError ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-400">
+          <span>{loadError}</span>
+          <button onClick={reload} className="font-medium underline underline-offset-2">
+            Try again
+          </button>
+        </div>
       ) : null}
 
       {loading ? (

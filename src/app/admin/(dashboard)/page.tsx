@@ -16,15 +16,20 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    user.getIdToken().then(async (token) => {
-      const [services, offers] = await Promise.all([
-        listAllServices(token, salon.id),
-        listAllOffers(token, salon.id),
-      ]);
-      if (cancelled) return;
-      setServiceCount(services.length);
-      setOfferCount(offers.length);
-    });
+    user
+      .getIdToken()
+      .then(async (token) => {
+        const [services, offers] = await Promise.all([
+          listAllServices(token, salon.id),
+          listAllOffers(token, salon.id),
+        ]);
+        if (cancelled) return;
+        setServiceCount(services.length);
+        setOfferCount(offers.length);
+      })
+      .catch((err) => {
+        if (!cancelled) console.error("Failed to load dashboard counts", err);
+      });
     return () => {
       cancelled = true;
     };
