@@ -1,31 +1,54 @@
 import "server-only";
-import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
-import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 /**
- * Server-only: verifies the Firebase ID token a signed-in owner sends with
- * every request to /api/**. This is the ONLY place in the app that
- * confirms who someone is — Supabase never sees Firebase's identity at
- * all, which is why every privileged Supabase read/write happens in a
- * Route Handler, after this check, using the service-role client (see
- * src/lib/server/supabaseAdmin.ts and src/lib/server/auth.ts).
+ * Verifies a Firebase Auth ID token WITHOUT firebase-admin.
+ *
+ * This used to use firebase-admin's `verifyIdToken()`, but firebase-admin
+ * pulls in a large dependency tree (google-gax/grpc and friends) that
+ * Vercel's serverless function bundler has repeatedly mishandled in this
+ * project — every /api/** route that merely imported it crashed with an
+ * empty 500 response, even `serverExternalPackages` didn't fix it (see
+ * git history / CLAUDE.md if this comes up again). Firebase ID tokens are
+ * just standard RS256 JWTs, so verifying them directly against Google's
+ * public keys with `jose` (a small, dependency-free JWT library with none
+ * of firebase-admin's bundling baggage) avoids the whole problem — and
+ * means we no longer need a service account key/credential at all.
  */
-function getAdminApp(): App {
-  if (getApps().length) return getApps()[0];
 
-  const encoded = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_BASE64;
-  if (!encoded) {
-    throw new Error(
-      "FIREBASE_SERVICE_ACCOUNT_KEY_BASE64 is not set. Generate a service account key " +
-        "(Firebase Console → Project settings → Service accounts → Generate new private key), " +
-        "base64-encode the JSON file, and set it in .env.local — see .env.local.example."
-    );
-  }
+const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-  const serviceAccount = JSON.parse(Buffer.from(encoded, "base64").toString("utf8"));
-  return initializeApp({ credential: cert(serviceAccount) });
+// createRemoteJWKSet caches the fetched keys and handles rotation itself —
+// safe to create once per cold start rather than per request.
+const JWKS = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com")
+);
+
+export interface VerifiedFirebaseToken {
+  uid: string;
+  email: string | null;
+  name: string | null;
+  picture: string | null;
 }
 
-export async function verifyFirebaseIdToken(idToken: string): Promise<DecodedIdToken> {
-  return getAuth(getAdminApp()).verifyIdToken(idToken);
+export async function verifyFirebaseIdToken(idToken: string): Promise<VerifiedFirebaseToken> {
+  if (!PROJECT_ID) {
+    throw new Error("NEXT_PUBLIC_FIREBASE_PROJECT_ID is not set — see .env.local.example.");
+  }
+
+  const { payload } = await jwtVerify(idToken, JWKS, {
+    issuer: `https://securetoken.google.com/${PROJECT_ID}`,
+    audience: PROJECT_ID,
+  });
+
+  if (typeof payload.sub !== "string") {
+    throw new Error("Token has no subject claim");
+  }
+
+  return {
+    uid: payload.sub,
+    email: typeof payload.email === "string" ? payload.email : null,
+    name: typeof payload.name === "string" ? payload.name : null,
+    picture: typeof payload.picture === "string" ? payload.picture : null,
+  };
 }

@@ -1,5 +1,5 @@
 import "server-only";
-import type { DecodedIdToken } from "firebase-admin/auth";
+import type { VerifiedFirebaseToken } from "@/lib/server/firebaseAdmin";
 import { ApiError } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
 
@@ -9,7 +9,7 @@ import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
  * Called once, right before a salon is created — there's no standalone
  * "sign up" step, so this is the natural place for it.
  */
-export async function upsertProfileFromToken(decoded: DecodedIdToken): Promise<void> {
+export async function upsertProfileFromToken(decoded: VerifiedFirebaseToken): Promise<void> {
   const { error } = await getSupabaseAdmin()
     .from("profiles")
     .upsert({

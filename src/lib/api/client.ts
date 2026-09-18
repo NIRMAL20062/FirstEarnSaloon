@@ -32,7 +32,10 @@ export async function apiFetch<T>(
 
   const json = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new ApiRequestError(response.status, json?.error ?? "Request failed");
+    throw new ApiRequestError(
+      response.status,
+      json?.error ?? `Request failed (HTTP ${response.status})`
+    );
   }
   return json as T;
 }

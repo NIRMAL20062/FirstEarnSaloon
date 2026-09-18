@@ -48,7 +48,9 @@ await requireSalonOwnership(uid, salonId); // 404 / 403 as appropriate
 ```
 
 - `src/lib/server/firebaseAdmin.ts` verifies the caller's Firebase ID token
-  (sent as `Authorization: Bearer <token>` from the browser).
+  (sent as `Authorization: Bearer <token>` from the browser) — against
+  Google's public keys directly via `jose`, deliberately **not** using the
+  `firebase-admin` package (see "Why not firebase-admin" below).
 - `src/lib/server/auth.ts` — `requireUid()` / `requireAuth()` wrap that
   verification; `requireSalonOwnership()` checks `salons.owner_id` against
   the verified uid.
@@ -90,7 +92,7 @@ src/
   lib/
     firebase/client.ts           Firebase Auth only (lazy-initialized — see below)
     supabase/publicClient.ts     anon-key Supabase client (public reads)
-    server/                      firebase-admin, service-role Supabase client, auth/ownership checks, zod schemas — server-only
+    server/                      Firebase ID token verification (jose, not firebase-admin), service-role Supabase client, auth/ownership checks, zod schemas — server-only
     auth/                        AuthContext (React), sign-in/out actions
     salon/SalonContext.tsx       the current salon, provided by the dashboard layout
     queries/                     salons.ts / services.ts / offers.ts — the data layer components call
@@ -102,6 +104,25 @@ src/
     models.ts                    app-facing Salon/Service/Offer types
 supabase/migrations/             SQL migrations — see Setup below
 ```
+
+## Why not firebase-admin
+
+Server-side ID token verification originally used `firebase-admin`
+(`verifyIdToken()`). On this project's Vercel deployment, every `/api/**`
+route that merely *imported* it crashed with an empty, bodyless 500 —
+including requests that never reached the code that actually called it,
+and this persisted even after correctly marking it as a
+`serverExternalPackages` entry (the standard fix for this class of
+problem). The real cause was never conclusively identified; rather than
+keep guessing against a deploy target that's slow to iterate on, it was
+replaced outright: `src/lib/server/firebaseAdmin.ts` now verifies the RS256
+JWT directly against Google's public keys
+(`https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com`)
+using `jose`, a small dependency-free JWT library. This needs only the
+Firebase **project ID** (already public, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`)
+— no service account key, no `firebase-admin` in `package.json` at all. If
+you're tempted to reach for `firebase-admin` for something else later,
+know that it has caused real, unresolved deployment failures here.
 
 ## Why Firebase/Supabase clients are lazily initialized
 
@@ -125,12 +146,10 @@ You need **two** separate backend projects:
 1. Create a project at console.firebase.google.com.
 2. Authentication → Sign-in method → enable **Google** and **Email/Password**.
 3. Project settings → General → Your apps → add a Web app → copy the config
-   into `NEXT_PUBLIC_FIREBASE_*` in `.env.local` (copy `.env.local.example` first).
-4. Project settings → Service accounts → Generate new private key → download
-   the JSON → `base64 -w0 the-file.json` → paste into
-   `FIREBASE_SERVICE_ACCOUNT_KEY_BASE64`. This is what
-   `src/lib/server/firebaseAdmin.ts` uses to verify ID tokens; it's the only
-   thing that makes the Route Handlers trust who's calling.
+   into `NEXT_PUBLIC_FIREBASE_*` in `.env.local` (copy `.env.local.example`
+   first). That's it — no service account key needed (see "Why not
+   firebase-admin" above); `NEXT_PUBLIC_FIREBASE_PROJECT_ID` alone is
+   enough for the server to verify ID tokens.
 
 ### 2. Supabase project (Database + Storage)
 

@@ -1,7 +1,6 @@
 import "server-only";
-import type { DecodedIdToken } from "firebase-admin/auth";
 import type { NextRequest } from "next/server";
-import { verifyFirebaseIdToken } from "@/lib/server/firebaseAdmin";
+import { verifyFirebaseIdToken, type VerifiedFirebaseToken } from "@/lib/server/firebaseAdmin";
 import { ApiError } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
 
@@ -12,7 +11,7 @@ import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
  * Throws ApiError (401) if the header is missing or the token is
  * invalid/expired.
  */
-export async function requireAuth(request: NextRequest): Promise<DecodedIdToken> {
+export async function requireAuth(request: NextRequest): Promise<VerifiedFirebaseToken> {
   const header = request.headers.get("authorization") ?? "";
   const idToken = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : null;
   if (!idToken) {
@@ -21,7 +20,8 @@ export async function requireAuth(request: NextRequest): Promise<DecodedIdToken>
 
   try {
     return await verifyFirebaseIdToken(idToken);
-  } catch {
+  } catch (error) {
+    console.error("Failed to verify Firebase ID token", error);
     throw new ApiError(401, "Invalid or expired session — please sign in again");
   }
 }
