@@ -38,3 +38,22 @@ Vercel project's environment variables:
   add your Vercel domain (e.g. `your-app.vercel.app`), or Google/email
   sign-in will be rejected on the live site (it only works from
   `localhost` and domains you've explicitly authorized).
+
+## Troubleshooting
+
+**`/api/**` requests return a 500 with a completely empty body** (not
+JSON, not any of this app's own error messages) — this happened during
+initial setup and turned out to be `firebase-admin` crashing Vercel's
+serverless function bundler on import. It's no longer a dependency of
+this project at all (see CLAUDE.md § "Why not firebase-admin"); if
+something similar happens again with a *different* package, the same
+"strip the dependency down to something dependency-free" approach is more
+reliable than trying to configure around the bundler.
+
+**A `git push` to `main` doesn't seem to update the live site** — check
+the Vercel project's Deployments tab: the "Source" shown for the current
+Production deployment names the exact commit it was built from. If it's
+behind your latest push, either the GitHub App integration lost access to
+the repo (Project Settings → Git) or the build for the newer commit failed
+silently — check that commit's own build log rather than assuming the
+push simply didn't arrive.
