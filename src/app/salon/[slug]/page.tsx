@@ -46,11 +46,18 @@ export default async function SalonPage({ params }: { params: Promise<PageParams
   ]);
 
   return (
-    <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-      <SalonHeader salon={salon} />
-      <OffersSection offers={offers} />
-      <ServicesSection services={services} />
-      <ContactSection salon={salon} />
+    <div className="relative min-h-screen flex-1 overflow-hidden bg-zinc-950">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-amber-600/20 blur-3xl" />
+        <div className="absolute top-1/3 -right-24 h-72 w-72 rounded-full bg-orange-700/15 blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-64 w-64 rounded-full bg-amber-500/10 blur-3xl" />
+      </div>
+      <div className="relative mx-auto flex w-full max-w-md flex-col pb-10">
+        <SalonHeader salon={salon} services={services} />
+        <OffersSection offers={offers} />
+        <ServicesSection services={services} />
+        <ContactSection salon={salon} />
+      </div>
     </div>
   );
 }

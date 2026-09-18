@@ -1,5 +1,7 @@
+import Image from "next/image";
 import type { Service } from "@/types/models";
 import { formatPrice } from "@/lib/format";
+import { ScissorsIcon } from "@/components/public/icons";
 
 function groupByCategory(services: Service[]): Map<string, Service[]> {
   const groups = new Map<string, Service[]>();
@@ -16,28 +18,44 @@ export function ServicesSection({ services }: { services: Service[] }) {
   const groups = groupByCategory(services);
 
   return (
-    <section className="px-4 py-6">
-      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+    <section className="px-4 py-4">
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-zinc-400">
         Services
       </h2>
       <div className="flex flex-col gap-5">
         {Array.from(groups.entries()).map(([category, items]) => (
           <div key={category}>
-            <h3 className="mb-2 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-              {category}
-            </h3>
-            <ul className="flex flex-col divide-y divide-zinc-100 dark:divide-zinc-800">
+            {groups.size > 1 ? (
+              <h3 className="mb-2 text-sm font-semibold text-zinc-300">{category}</h3>
+            ) : null}
+            <ul className="flex flex-col gap-2">
               {items.map((service) => (
-                <li key={service.id} className="flex items-baseline justify-between gap-4 py-2">
-                  <div>
-                    <p className="font-medium">{service.name}</p>
+                <li
+                  key={service.id}
+                  className="flex items-center gap-3 rounded-2xl border border-white/5 bg-white/5 p-2.5"
+                >
+                  {service.imageUrl ? (
+                    <Image
+                      src={service.imageUrl}
+                      alt={service.name}
+                      width={56}
+                      height={56}
+                      className="h-14 w-14 shrink-0 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/5 text-zinc-500">
+                      <ScissorsIcon className="h-6 w-6" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium text-white">{service.name}</p>
                     {service.description ? (
-                      <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        {service.description}
-                      </p>
+                      <p className="truncate text-sm text-zinc-400">{service.description}</p>
                     ) : null}
                   </div>
-                  <p className="shrink-0 font-semibold">{formatPrice(service.price)}</p>
+                  <p className="shrink-0 font-semibold text-amber-400">
+                    {formatPrice(service.price)}
+                  </p>
                 </li>
               ))}
             </ul>

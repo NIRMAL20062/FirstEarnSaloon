@@ -39,6 +39,8 @@ export interface Database {
           name: string;
           slug: string;
           logo_url: string | null;
+          cover_image_url: string | null;
+          tagline: string | null;
           phone: string | null;
           whatsapp: string | null;
           address: string | null;
@@ -52,6 +54,8 @@ export interface Database {
           name: string;
           slug: string;
           logo_url?: string | null;
+          cover_image_url?: string | null;
+          tagline?: string | null;
           phone?: string | null;
           whatsapp?: string | null;
           address?: string | null;
