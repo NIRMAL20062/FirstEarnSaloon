@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { signInWithEmail, signInWithGoogle, signUpWithEmail } from "@/lib/auth/actions";
+import { resetPassword, signInWithEmail, signInWithGoogle, signUpWithEmail } from "@/lib/auth/actions";
 import { FullPageSpinner } from "@/components/admin/FullPageSpinner";
 
 function authErrorMessage(error: unknown): string {
@@ -32,6 +32,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     if (!loading && user) router.replace("/admin");
@@ -54,6 +55,7 @@ export default function AdminLoginPage() {
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setResetSent(false);
     setSubmitting(true);
     try {
       if (mode === "sign-in") {
@@ -65,6 +67,29 @@ export default function AdminLoginPage() {
       setError(authErrorMessage(err));
       setSubmitting(false);
     }
+  }
+
+  async function handleForgotPassword() {
+    setError(null);
+    if (!email) {
+      setError('Enter your email above, then click "Forgot password?".');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await resetPassword(email);
+    } catch (err) {
+      const code = (err as { code?: string })?.code ?? "";
+      // Don't reveal whether an account exists for this email — treat
+      // "no such user" the same as a successful send.
+      if (code !== "auth/user-not-found") {
+        setError(authErrorMessage(err));
+        setSubmitting(false);
+        return;
+      }
+    }
+    setSubmitting(false);
+    setResetSent(true);
   }
 
   return (
@@ -109,7 +134,13 @@ export default function AdminLoginPage() {
           required
         />
 
-        {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+        {resetSent ? (
+          <p className="text-sm text-green-600 dark:text-green-400">
+            If an account exists for that email, we&apos;ve sent a password reset link.
+          </p>
+        ) : error ? (
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        ) : null}
 
         <button
           type="submit"
@@ -120,9 +151,21 @@ export default function AdminLoginPage() {
         </button>
       </form>
 
+      {mode === "sign-in" ? (
+        <button
+          type="button"
+          onClick={handleForgotPassword}
+          disabled={submitting}
+          className="mt-3 text-left text-sm text-zinc-500 hover:underline dark:text-zinc-400"
+        >
+          Forgot password?
+        </button>
+      ) : null}
+
       <button
         onClick={() => {
           setError(null);
+          setResetSent(false);
           setMode(mode === "sign-in" ? "sign-up" : "sign-in");
         }}
         className="mt-4 text-sm text-zinc-500 hover:underline dark:text-zinc-400"

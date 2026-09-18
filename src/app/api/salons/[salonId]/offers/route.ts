@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fromOfferRow } from "@/lib/models/mappers";
 import { requireSalonOwnership, requireUid } from "@/lib/server/auth";
-import { ApiError, parseJsonBody, withErrorHandling } from "@/lib/server/http";
+import { dbError, parseJsonBody, withErrorHandling } from "@/lib/server/http";
 import { offerCreateSchema } from "@/lib/server/schemas";
 import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
 
@@ -21,7 +21,7 @@ export const GET = withErrorHandling(async (request: NextRequest, context: Conte
     .eq("salon_id", salonId)
     .order("sort_order", { ascending: true });
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
   return NextResponse.json({ offers: (data ?? []).map(fromOfferRow) });
 });
 
@@ -47,6 +47,6 @@ export const POST = withErrorHandling(async (request: NextRequest, context: Cont
     .select("*")
     .single();
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
   return NextResponse.json({ offer: fromOfferRow(data) }, { status: 201 });
 });

@@ -1,6 +1,6 @@
 import "server-only";
 import type { VerifiedFirebaseToken } from "@/lib/server/firebaseAdmin";
-import { ApiError } from "@/lib/server/http";
+import { dbError } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
 
 /**
@@ -19,5 +19,5 @@ export async function upsertProfileFromToken(decoded: VerifiedFirebaseToken): Pr
       avatar_url: decoded.picture ?? null,
     });
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
 }

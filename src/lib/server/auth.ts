@@ -1,7 +1,7 @@
 import "server-only";
 import type { NextRequest } from "next/server";
 import { verifyFirebaseIdToken, type VerifiedFirebaseToken } from "@/lib/server/firebaseAdmin";
-import { ApiError } from "@/lib/server/http";
+import { ApiError, dbError } from "@/lib/server/http";
 import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
 
 /**
@@ -43,7 +43,7 @@ export async function requireSalonOwnership(uid: string, salonId: string): Promi
     .eq("id", salonId)
     .maybeSingle();
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
   if (!data) throw new ApiError(404, "Salon not found");
   if (data.owner_id !== uid) throw new ApiError(403, "You don't own this salon");
 }

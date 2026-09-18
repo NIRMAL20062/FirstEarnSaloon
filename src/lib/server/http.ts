@@ -34,6 +34,17 @@ export function withErrorHandling<Args extends unknown[]>(
   };
 }
 
+/**
+ * Wraps an unexpected Supabase/Postgres error for a client response: logs
+ * the real message server-side and returns a generic ApiError instead —
+ * the database's own error text (column/constraint names, query
+ * fragments) should never reach the client directly.
+ */
+export function dbError(error: { message: string }): ApiError {
+  console.error("Database error:", error.message);
+  return new ApiError(500, "Something went wrong. Please try again.");
+}
+
 /** Parses the request body as JSON and validates it against `schema`, throwing a 400 ApiError on failure. */
 export async function parseJsonBody<T>(request: NextRequest, schema: ZodType<T>): Promise<T> {
   const json = await request.json().catch(() => null);

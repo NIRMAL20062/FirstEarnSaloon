@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fromServiceRow } from "@/lib/models/mappers";
 import { requireSalonOwnership, requireUid } from "@/lib/server/auth";
-import { ApiError, parseJsonBody, withErrorHandling } from "@/lib/server/http";
+import { dbError, parseJsonBody, withErrorHandling } from "@/lib/server/http";
 import { serviceCreateSchema } from "@/lib/server/schemas";
 import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
 
@@ -21,7 +21,7 @@ export const GET = withErrorHandling(async (request: NextRequest, context: Conte
     .eq("salon_id", salonId)
     .order("sort_order", { ascending: true });
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
   return NextResponse.json({ services: (data ?? []).map(fromServiceRow) });
 });
 
@@ -46,6 +46,6 @@ export const POST = withErrorHandling(async (request: NextRequest, context: Cont
     .select("*")
     .single();
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
   return NextResponse.json({ service: fromServiceRow(data) }, { status: 201 });
 });

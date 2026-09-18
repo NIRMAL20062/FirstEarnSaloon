@@ -2,6 +2,7 @@
 
 import type { User } from "firebase/auth";
 import { useState } from "react";
+import { ApiRequestError } from "@/lib/api/client";
 import { createSalon, slugify } from "@/lib/queries/salons";
 
 export function CreateSalonForm({
@@ -39,6 +40,14 @@ export function CreateSalonForm({
       await createSalon(token, { name: name.trim(), slug: finalSlug });
       await onCreated();
     } catch (err) {
+      // A 409 here can mean this owner already has a salon (e.g. a retried
+      // request that landed after an earlier one already succeeded) — in
+      // that case just load their existing salon instead of dead-ending on
+      // an error message for something that isn't actually a problem.
+      if (err instanceof ApiRequestError && err.status === 409 && err.message.includes("already have a salon")) {
+        await onCreated();
+        return;
+      }
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);

@@ -3,6 +3,7 @@
 import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -29,4 +30,8 @@ export async function signUpWithEmail(email: string, password: string, name?: st
 
 export async function signOutUser() {
   await signOut(getFirebaseAuth());
+}
+
+export async function resetPassword(email: string) {
+  await sendPasswordResetEmail(getFirebaseAuth(), email);
 }

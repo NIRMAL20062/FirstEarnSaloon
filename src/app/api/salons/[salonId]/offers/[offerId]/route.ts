@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fromOfferRow } from "@/lib/models/mappers";
 import { requireSalonOwnership, requireUid } from "@/lib/server/auth";
-import { ApiError, parseJsonBody, withErrorHandling } from "@/lib/server/http";
+import { dbError, parseJsonBody, withErrorHandling } from "@/lib/server/http";
 import { offerUpdateSchema } from "@/lib/server/schemas";
 import { getSupabaseAdmin } from "@/lib/server/supabaseAdmin";
 import type { Database } from "@/types/database";
@@ -35,7 +35,7 @@ export const PATCH = withErrorHandling(async (request: NextRequest, context: Con
     .select("*")
     .single();
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
   return NextResponse.json({ offer: fromOfferRow(data) });
 });
 
@@ -50,6 +50,6 @@ export const DELETE = withErrorHandling(async (request: NextRequest, context: Co
     .eq("id", offerId)
     .eq("salon_id", salonId);
 
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw dbError(error);
   return NextResponse.json({ ok: true });
 });
