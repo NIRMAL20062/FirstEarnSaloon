@@ -1,12 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { QRCodeSVG } from "qrcode.react";
+
+function noopSubscribe() {
+  return () => {};
+}
+
+/**
+ * The browser's own origin, read via useSyncExternalStore so the client
+ * can pick it up after mount with no server/client hydration mismatch
+ * (the server snapshot is always "").
+ */
+function useBrowserOrigin(): string {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => window.location.origin,
+    () => ""
+  );
+}
 
 export function QRCodeCard({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
-
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  // Falls back to the browser's own origin if NEXT_PUBLIC_SITE_URL isn't
+  // set for this deployment — without it, the QR code would silently
+  // encode a bare "/salon/<slug>" path, which isn't a URL a phone camera
+  // can do anything with.
+  const browserOrigin = useBrowserOrigin();
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || browserOrigin;
   const publicUrl = `${siteUrl}/salon/${slug}`;
 
   async function copyLink() {
